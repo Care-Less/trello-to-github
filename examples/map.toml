@@ -34,4 +34,6 @@ github = 9000090739
 
 [[labels]]
 trello = "RFC"
-github = 8999843233
+create = true
+github = "New RFC Label"
+# github = 8999843233

@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 
+export type Trello = z.infer<typeof BoardExport>;
 export const BoardExport = z.object({
 	name: z.string(),
 	// The lists in the board
@@ -55,6 +56,7 @@ export const BoardExport = z.object({
 	),
 });
 
+export type Map = z.infer<typeof MapFormat>;
 export const MapFormat = z.object({
 	labels: z.array(
 		z.union([
@@ -65,7 +67,7 @@ export const MapFormat = z.object({
 				// If a string, assumed to be the name of a label. If an int, it's the ID of the label.
 				github: z.union([z.string().min(1), z.int()]),
 				// Whether to create the label, if it does not exist.
-				create: z.literal(false).optional(),
+				create: z.literal(false).optional().default(false),
 			}),
 			// create new label
 			z.object({

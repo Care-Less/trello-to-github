@@ -1,0 +1,37 @@
+[[labels]]
+# The name of the Trello label
+trello = "High Priority"
+# The name or ID of the equivalent GitHub label
+github = 9000084910
+
+[[labels]]
+trello = "Med. Priority"
+github = 9000085331
+
+[[labels]]
+trello = "Low Priority"
+github = 8999843230
+
+[[labels]]
+trello = "Enhancement"
+github = 9000085739
+
+[[labels]]
+trello = "New Feature"
+github = 8999843230
+
+[[labels]]
+trello = "Bug"
+github = 8999843222
+
+[[labels]]
+trello = "No Repro"
+github = 9000089270
+
+[[labels]]
+trello = "Patreon Locked"
+github = 9000090739
+
+[[labels]]
+trello = "RFC"
+github = 8999843233

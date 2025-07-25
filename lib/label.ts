@@ -99,7 +99,11 @@ export function renderTrelloLabel(label: Label): string {
 
 export function renderGithubLabel(label: ToCreateLabel | MappedLabel): string {
 	if (label.type === "toCreate") {
-		return `Will create: ${chalk.bold(label.github.name)}`;
+		if (label.github.color) {
+			return `${chalk.bold("Will create:")} ${chalk.bgHex(label.github.color)(` ${label.github.name} `)}`;
+		} else {
+			return `Will create: ${chalk.bold(label.github.name)}`;
+		}
 	}
 	const makeColor = chalk.bgHex(label.github.color);
 	return makeColor(` ${label.github.name} `);

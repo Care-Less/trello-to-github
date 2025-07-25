@@ -1,5 +1,6 @@
 #! /usr/bin/env bun
 
+import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { Octokit } from "octokit";
 import TOML from "smol-toml";
@@ -47,21 +48,23 @@ async function runParseTrello(args: {
 	mapFile: string;
 	ghKey: string;
 }) {
+	p.intro(`${chalk.bold.cyanBright("Trello To GitHub")} v0.1.0`);
 	const exportFile = Bun.file(args.file);
 	const mapFile = Bun.file(args.mapFile);
 
 	const exportedResult = BoardExport.safeParse(await exportFile.json());
 	const mapResult = MapFormat.safeParse(TOML.parse(await mapFile.text()));
 	if (!exportedResult.success) {
-		console.log(`Error in export file (${args.file}):`);
-		console.log(z.prettifyError(exportedResult.error));
+		p.log.warn(`Failed to parse export file (${args.file}):`);
+		p.log.error(z.prettifyError(exportedResult.error));
 	}
 	if (!mapResult.success) {
-		console.log(`Error in map file (${args.mapFile}):`);
-		console.log(z.prettifyError(mapResult.error));
+		p.log.warn(`Failed to parse map file (${args.mapFile}):`);
+		p.log.error(z.prettifyError(mapResult.error));
 	}
 	if (!mapResult.success || !exportedResult.success) {
 		process.exitCode = 1;
+		p.outro();
 		return;
 	}
 
@@ -70,6 +73,7 @@ async function runParseTrello(args: {
 	const githubLabels = await octokit.request(
 		"GET /repos/{owner}/{repo}/labels",
 		{
+			// TODO: fix this hardcoding
 			owner: "piemot",
 			repo: "sample",
 			headers: {
@@ -95,14 +99,15 @@ async function runParseTrello(args: {
 			labels.push({
 				type: "toCreate",
 				trello: trelloLabel,
-				github: { name: mapped.github },
+				github: { name: mapped.github, color: mapped.color },
 			});
 			continue;
 		}
 		// the GitHub label where either the ID or the name matches the GitHub mapping
 		const githubLabel = githubLabels.data.find(
 			(ghLabel) =>
-				ghLabel.id === mapped.github || ghLabel.name === mapped.github,
+				(Number.isInteger(mapped.github) && ghLabel.id === mapped.github) ||
+				ghLabel.name === mapped.github,
 		);
 		if (!githubLabel) {
 			labels.push({
@@ -121,28 +126,49 @@ async function runParseTrello(args: {
 	const missingLabels = labels.filter((l) => l.type === "missing");
 	const skippedLabels = labels.filter((l) => l.type === "skipped");
 
-	console.log(`Mapping labels: `);
-	console.log(
-		mappedLabels
-			.map(
-				(label) => `${renderTrelloLabel(label)} -> ${renderGithubLabel(label)}`,
-			)
-			.join("\n"),
+	p.note(
+		chalk.reset(
+			mappedLabels
+				.map(
+					(label) =>
+						`${renderTrelloLabel(label)} -> ${renderGithubLabel(label)}`,
+				)
+				.join("\n"),
+		),
+		"Mapping labels:",
 	);
 
 	const formatter = new Intl.ListFormat("en", {
 		style: "long",
 		type: "conjunction",
 	});
+	const ignoredLabels = formatter.format(
+		skippedLabels.map((label) => renderTrelloLabel(label)),
+	);
+	if (skippedLabels.length > 0) {
+		p.log.warn(`These labels will not be transferred: ${ignoredLabels}`);
+	}
+
 	const unknownLabels = formatter.format(
 		missingLabels.map(
 			(label) =>
 				`${renderTrelloLabel(label)} (${chalk.dim(label.githubLookup)})`,
 		),
 	);
-	console.warn(`[!!!] Could not find labels in GitHub: ${unknownLabels}`);
-	const ignoredLabels = formatter.format(
-		skippedLabels.map((label) => renderTrelloLabel(label)),
-	);
-	console.warn(`[!!!] These labels will not be transferred: ${ignoredLabels}`);
+	if (missingLabels.length > 0) {
+		p.log.error(`Could not find labels in GitHub: ${unknownLabels}`);
+		process.exitCode = 1;
+		p.outro();
+		return;
+	}
+
+	if (skippedLabels.length > 0) {
+		const conf = await p.confirm({ message: "Would you like to continue?" });
+		if (p.isCancel(conf) || !conf) {
+			p.cancel("Operation cancelled.");
+			return;
+		}
+	}
+
+	p.outro();
 }

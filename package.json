@@ -9,6 +9,8 @@
 		"t2gh": "./index.ts"
 	},
 	"dependencies": {
+		"@clack/core": "^0.5.0",
+		"@clack/prompts": "^0.11.0",
 		"chalk": "^5.4.1",
 		"octokit": "^5.0.3",
 		"smol-toml": "^1.4.1",

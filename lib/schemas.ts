@@ -77,6 +77,11 @@ export const MapFormat = z.object({
 				github: z.string().min(1),
 				// Whether to create the label, if it does not exist.
 				create: z.literal(true),
+				// The color to create the GitHub label with.
+				color: z
+					.string()
+					.regex(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/i)
+					.optional(),
 			}),
 		]),
 	),

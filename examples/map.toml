@@ -10,11 +10,11 @@ github = 9000085331
 
 [[labels]]
 trello = "Low Priority"
-github = 8999843230
+github = 9000085739
 
 [[labels]]
 trello = "Enhancement"
-github = 9000085739
+github = 8999843230
 
 [[labels]]
 trello = "New Feature"
@@ -34,6 +34,8 @@ github = 9000090739
 
 [[labels]]
 trello = "RFC"
-create = true
-github = "New RFC Label"
-# github = 8999843233
+github = 8999843233
+
+[[members]]
+trello = "piemot"
+github = "piemot"

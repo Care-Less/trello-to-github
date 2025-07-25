@@ -2,7 +2,7 @@
 
 import * as p from "@clack/prompts";
 import chalk from "chalk";
-import { Octokit } from "octokit";
+import { Octokit, RequestError } from "octokit";
 import TOML from "smol-toml";
 import invariant from "tiny-invariant";
 import yargs from "yargs";
@@ -68,22 +68,40 @@ async function runParseTrello(args: {
 		return;
 	}
 
+	const trello = exportedResult.data;
+	const map = mapResult.data;
+
 	const octokit = new Octokit({ auth: args.ghKey });
+
+	// TODO: fix this hardcoding
+	const repoData = { owner: "piemot", repo: "sample" };
+	const defaultHeaders = { "X-GitHub-Api-Version": "2022-11-28" };
+	const baseRequest = { ...repoData, headers: defaultHeaders };
 
 	const githubLabels = await octokit.request(
 		"GET /repos/{owner}/{repo}/labels",
-		{
-			// TODO: fix this hardcoding
-			owner: "piemot",
-			repo: "sample",
-			headers: {
-				"X-GitHub-Api-Version": "2022-11-28",
-			},
-		},
+		{ ...baseRequest },
 	);
-
-	const trello = exportedResult.data;
-	const map = mapResult.data;
+	const members = [];
+	for (const member of map.members) {
+		try {
+			const githubMember = await octokit.request("GET /users/{username}", {
+				username: member.github,
+				headers: defaultHeaders,
+			});
+			members.push({ trelloName: member.trello, github: githubMember });
+		} catch (e) {
+			if (e instanceof RequestError && e.status === 404) {
+				members.push({
+					trelloName: member.trello,
+					github: null,
+					githubName: member.github,
+				});
+			} else {
+				throw e;
+			}
+		}
+	}
 
 	const labels: Label[] = [];
 
@@ -142,21 +160,39 @@ async function runParseTrello(args: {
 		style: "long",
 		type: "conjunction",
 	});
-	const ignoredLabels = formatter.format(
-		skippedLabels.map((label) => renderTrelloLabel(label)),
-	);
 	if (skippedLabels.length > 0) {
+		const ignoredLabels = formatter.format(
+			skippedLabels.map((label) => renderTrelloLabel(label)),
+		);
 		p.log.warn(`These labels will not be transferred: ${ignoredLabels}`);
 	}
 
-	const unknownLabels = formatter.format(
-		missingLabels.map(
-			(label) =>
-				`${renderTrelloLabel(label)} (${chalk.dim(label.githubLookup)})`,
-		),
-	);
 	if (missingLabels.length > 0) {
+		const unknownLabels = formatter.format(
+			missingLabels.map(
+				(label) =>
+					`${renderTrelloLabel(label)} (${chalk.dim(label.githubLookup)})`,
+			),
+		);
 		p.log.error(`Could not find labels in GitHub: ${unknownLabels}`);
+	}
+
+	const validMembers = members.filter((mem) => mem.github);
+	const invalidMembers = members.filter((mem) => !mem.github);
+
+	if (invalidMembers.length > 0) {
+		const missingUsers = formatter.format(
+			invalidMembers.map(
+				(member) =>
+					`${chalk.bold(`@${member.trelloName}`)} (${chalk.dim(`@${member.githubName}`)})`,
+			),
+		);
+		p.log.error(
+			`The following Trello users are not GitHub Users: ${missingUsers}`,
+		);
+	}
+
+	if (missingLabels.length > 0 || invalidMembers.length > 0) {
 		process.exitCode = 1;
 		p.outro();
 		return;
@@ -168,6 +204,90 @@ async function runParseTrello(args: {
 			p.cancel("Operation cancelled.");
 			return;
 		}
+	}
+
+	const labelsToCreate = labels.filter((l) => l.type === "toCreate");
+	const existingLabelsToCreate = labelsToCreate.filter((label) =>
+		githubLabels.data.some((ghLabel) => ghLabel.name === label.github.name),
+	);
+
+	if (existingLabelsToCreate.length > 0) {
+		const existingLabels = formatter.format(
+			existingLabelsToCreate.map((label) => renderGithubLabel(label)),
+		);
+		p.log.warn(`These labels already exist in GitHub: ${existingLabels}`);
+		const conf = await p.confirm({
+			message: "Are you sure you would like to continue creating them?",
+		});
+		if (p.isCancel(conf) || !conf) {
+			p.cancel("Operation cancelled.");
+			return;
+		}
+	}
+
+	if (labelsToCreate.length > 0) {
+		const spin = p.spinner({ indicator: "timer" });
+		spin.start(`Creating labels [0/${labelsToCreate.length}]`);
+		for (const [count, label] of labelsToCreate.entries()) {
+			await octokit.request("POST /repos/{owner}/{repo}/labels", {
+				...baseRequest,
+				name: label.github.name,
+				color: label.github.color?.trim().replace(/^#/, ""),
+			});
+			spin.message(`Creating labels [${count + 1}/${labelsToCreate.length}]`);
+		}
+		spin.stop(`Created ${labelsToCreate.length} labels.`);
+	}
+
+	function mapLabels(trelloLabels: string[]): string[] {
+		const res = [];
+		for (const trelloName of trelloLabels) {
+			const found = labels.find((label) => label.trello.name === trelloName);
+			invariant(
+				found,
+				"There should not exist a Trello label that is not in `labels`.",
+			);
+			if (found.type === "mapped" || found.type === "toCreate") {
+				res.push(found.github.name);
+			}
+		}
+		return res;
+	}
+
+	function mapMemberIds(trelloMemberIds: string[]): string[] {
+		return trelloMemberIds
+			.map((trelloId) => {
+				const trelloMember = trello.members.find((mem) => mem.id === trelloId);
+				if (!trelloMember) return null;
+
+				// Trello members can be searched by ID, username, or full name
+				const member = validMembers.find((mem) =>
+					[
+						trelloMember.id,
+						trelloMember.username,
+						trelloMember.fullName,
+					].includes(mem.trelloName),
+				);
+				if (!member?.github) return null;
+				return member.github.data.login;
+			})
+			.filter((m) => m !== null);
+	}
+
+	function getDescription(card: (typeof trello.cards)[number]): string {
+		// TODO: if has checklist, add to description
+		return card.desc;
+	}
+
+	for (const card of trello.cards) {
+		await octokit.request("POST /repos/{owner}/{repo}/issues", {
+			...baseRequest,
+			title: card.name,
+			body: getDescription(card),
+			labels: mapLabels(card.labels.map((l) => l.name)),
+			assignees: mapMemberIds(card.idMembers),
+			// milestone: 1,
+		});
 	}
 
 	p.outro();

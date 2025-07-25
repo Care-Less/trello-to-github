@@ -11,6 +11,13 @@ export const BoardExport = z.object({
 			closed: z.boolean(),
 		}),
 	),
+	members: z.array(
+		z.object({
+			id: z.string(),
+			fullName: z.string(),
+			username: z.string(),
+		}),
+	),
 	// The cards in the board
 	cards: z.array(
 		z.object({
@@ -19,6 +26,8 @@ export const BoardExport = z.object({
 			desc: z.string(),
 			// The ID of the list it belongs to (see `lists`)
 			idList: z.string(),
+			// The IDs of members assigned to it
+			idMembers: z.array(z.string()),
 			labels: z.array(
 				z.object({
 					id: z.string(),
@@ -84,5 +93,20 @@ export const MapFormat = z.object({
 					.optional(),
 			}),
 		]),
+	),
+	// maps assignees
+	members: z.array(
+		z.object({
+			// The name of the member in Trello.
+			trello: z
+				.string()
+				.min(1)
+				.refine((arg) => arg.replace(/^@/, "")),
+			// The username of the member in GitHub.
+			github: z
+				.string()
+				.min(1)
+				.refine((arg) => arg.replace(/^@/, "")),
+		}),
 	),
 });

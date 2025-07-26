@@ -30,6 +30,7 @@ trello-to-github \
   --trello-key <TRELLO_API_KEY> \
   --trello-token <TRELLO_API_TOKEN> \
   --trello-board <TRELLO_BOARD_ID> \
+  --trello-export <TRELLO_EXPORT_FILE>
   --github-token <GITHUB_TOKEN> \
   --github-repo <OWNER/REPO>
 ```

@@ -18,6 +18,26 @@ export const BoardExport = z.object({
 			username: z.string(),
 		}),
 	),
+	actions: z.array(
+		z.discriminatedUnion("type", [
+			// comment on card
+			z.object({
+				id: z.string(),
+				memberCreator: z.object({
+					id: z.string(),
+					username: z.string(),
+				}),
+				data: z.object({
+					idCard: z.string(),
+					text: z.string(),
+				}),
+				type: z.literal("commentCard"),
+				date: z.date(),
+			}),
+			// other objects are stripped
+			z.object({}),
+		]),
+	),
 	// The cards in the board
 	cards: z.array(
 		z.object({
@@ -68,7 +88,7 @@ export const BoardExport = z.object({
 export type Map = z.infer<typeof MapFormat>;
 export const MapFormat = z.object({
 	labels: z.array(
-		z.union([
+		z.discriminatedUnion("create", [
 			// fetch label
 			z.object({
 				// The name of the label in Trello.

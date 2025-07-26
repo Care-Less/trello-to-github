@@ -254,24 +254,24 @@ async function runParseTrello(args: {
 		return res;
 	}
 
-	function mapMemberIds(trelloMemberIds: string[]): string[] {
-		return trelloMemberIds
-			.map((trelloId) => {
-				const trelloMember = trello.members.find((mem) => mem.id === trelloId);
-				if (!trelloMember) return null;
+	function mapMemberId(trelloMemberId: string): string | null {
+		const trelloMember = trello.members.find(
+			(mem) => mem.id === trelloMemberId,
+		);
+		if (!trelloMember) return null;
 
-				// Trello members can be searched by ID, username, or full name
-				const member = validMembers.find((mem) =>
-					[
-						trelloMember.id,
-						trelloMember.username,
-						trelloMember.fullName,
-					].includes(mem.trelloName),
-				);
-				if (!member?.github) return null;
-				return member.github.data.login;
-			})
-			.filter((m) => m !== null);
+		// Trello members can be searched by ID, username, or full name
+		const member = validMembers.find((mem) =>
+			[trelloMember.id, trelloMember.username, trelloMember.fullName].includes(
+				mem.trelloName,
+			),
+		);
+		if (!member?.github) return null;
+		return member.github.data.login;
+	}
+
+	function mapMemberIds(trelloMemberIds: string[]): string[] {
+		return trelloMemberIds.map(mapMemberId).filter((m) => m !== null);
 	}
 
 	function getDescription(card: (typeof trello.cards)[number]): string {
@@ -279,8 +279,29 @@ async function runParseTrello(args: {
 		return card.desc;
 	}
 
+	function getCommentsForCard(card: (typeof trello.cards)[number]): string[] {
+		const res = [];
+		const commentActions = trello.actions.filter(
+			(action) =>
+				action.type === "commentCard" && action.data.idCard === card.id,
+		);
+		commentActions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+		for (const action of commentActions) {
+			const member = mapMemberId(action.memberCreator.id);
+			const memberString = member
+				? `@${member}`
+				: `\`@${action.memberCreator.username}\``;
+
+			const header = `## ${memberString} • ${action.date.toLocaleDateString()}`;
+			res.push(`${header}\n${action.data.text}`);
+		}
+
+		return res;
+	}
+
 	for (const card of trello.cards) {
-		await octokit.request("POST /repos/{owner}/{repo}/issues", {
+		const issue = await octokit.request("POST /repos/{owner}/{repo}/issues", {
 			...baseRequest,
 			title: card.name,
 			body: getDescription(card),
@@ -288,6 +309,18 @@ async function runParseTrello(args: {
 			assignees: mapMemberIds(card.idMembers),
 			// milestone: 1,
 		});
+
+		const comments = getCommentsForCard(card);
+		for (const comment of comments) {
+			await octokit.request(
+				"POST /repos/{owner}/{repo}/issues/{issue_number}/comments",
+				{
+					...baseRequest,
+					issue_number: issue.data.number,
+					body: comment,
+				},
+			);
+		}
 	}
 
 	p.outro();

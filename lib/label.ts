@@ -48,7 +48,42 @@ export type MappedLabel = {
 	};
 };
 
-export type Label = SkippedLabel | ToCreateLabel | MissingLabel | MappedLabel;
+// A GitHub label granted to cards originating from a certain Trello list,
+// but it couldn't be found in GitHub.
+export type MissingListLabel = {
+	type: "missingList";
+	trelloList: { id: string; name: string };
+	githubLookup: number | string;
+};
+
+// A GitHub label granted to cards originating from a certain Trello list
+export type ListMappedLabel = {
+	type: "listMapped";
+	trelloList: { id: string; name: string };
+	github: {
+		id: number;
+		name: string;
+		color: string;
+	};
+};
+
+export type Label =
+	| SkippedLabel
+	| ToCreateLabel
+	| MissingLabel
+	| MappedLabel
+	| MissingListLabel
+	| ListMappedLabel;
+
+// Labels that have come from Trello
+export type TrelloLabel =
+	| SkippedLabel
+	| ToCreateLabel
+	| MissingLabel
+	| MappedLabel;
+
+// Labels that are going to GitHub
+export type GithubLabel = ToCreateLabel | MappedLabel | ListMappedLabel;
 
 // A map of Trello color names to their hex values.
 const colorMap: Record<string, ChalkInstance> = {
@@ -84,7 +119,7 @@ const colorMap: Record<string, ChalkInstance> = {
 	black_dark: chalk.bgHex("#626F86"),
 };
 
-export function renderTrelloLabel(label: Label): string {
+export function renderTrelloLabel(label: TrelloLabel): string {
 	const makeColor = colorMap[label.trello.color];
 	invariant(makeColor, () => {
 		const formatter = new Intl.ListFormat("en", {
@@ -97,7 +132,7 @@ export function renderTrelloLabel(label: Label): string {
 	return makeColor(` ${label.trello.name} `);
 }
 
-export function renderGithubLabel(label: ToCreateLabel | MappedLabel): string {
+export function renderGithubLabel(label: GithubLabel): string {
 	if (label.type === "toCreate") {
 		if (label.github.color) {
 			return `${chalk.bold("Will create:")} ${chalk.bgHex(label.github.color)(` ${label.github.name} `)}`;
@@ -107,4 +142,34 @@ export function renderGithubLabel(label: ToCreateLabel | MappedLabel): string {
 	}
 	const makeColor = chalk.bgHex(label.github.color);
 	return makeColor(` ${label.github.name} `);
+}
+
+const fieldColorMap: Record<string, string> = {
+	BLUE: "#0969da",
+	GRAY: "#59636e",
+	GREEN: "#1a7f37",
+	ORANGE: "#bc4c00",
+	PINK: "#bf3989",
+	PURPLE: "#8250df",
+	RED: "#d1242f",
+	YELLOW: "#9a6700",
+};
+// const fieldColorMap: Record<string, string> = {
+// 	BLUE: "#ddf4ff",
+// 	GRAY: "#f6f8fa",
+// 	GREEN: "#dafbe1",
+// 	ORANGE: "#fff1e5",
+// 	PINK: "#ffeff7",
+// 	PURPLE: "#fbefff",
+// 	RED: "#ffebe9",
+// 	YELLOW: "#fff8c5",
+// };
+
+export function renderGithubFieldOption(option: {
+	id: string;
+	name: string;
+	color: string;
+}): string {
+	const makeColor = chalk.bold.hex(fieldColorMap[option.color]);
+	return ` ${makeColor("●")} ${chalk.reset(option.name)}`;
 }

@@ -19,7 +19,7 @@ export const BoardExport = z.object({
 		}),
 	),
 	actions: z.array(
-		z.discriminatedUnion("type", [
+		z.union([
 			// comment on card
 			z.object({
 				id: z.string(),
@@ -42,8 +42,12 @@ export const BoardExport = z.object({
 	cards: z.array(
 		z.object({
 			id: z.string(),
+			name: z.string(),
+			url: z.string(),
 			closed: z.boolean(),
 			desc: z.string(),
+			// The IDs of the checklists it displays
+			idChecklists: z.array(z.string()),
 			// The ID of the list it belongs to (see `lists`)
 			idList: z.string(),
 			// The IDs of members assigned to it
@@ -56,7 +60,13 @@ export const BoardExport = z.object({
 					uses: z.int(),
 				}),
 			),
-			name: z.string(),
+			attachments: z.array(
+				z.object({
+					id: z.string(),
+					name: z.string(),
+					url: z.string(),
+				}),
+			),
 		}),
 	),
 	// The labels in the board
@@ -87,6 +97,19 @@ export const BoardExport = z.object({
 
 export type Map = z.infer<typeof MapFormat>;
 export const MapFormat = z.object({
+	// The repository to transfer into
+	repo: z.object({
+		owner: z.union([
+			z.object({
+				type: z.enum(["organization", "user"]),
+				login: z.string().min(1),
+			}),
+			z.string().min(1),
+		]),
+		repo: z.string().min(1),
+	}),
+	// (optional) The ID of the project to add created issues to
+	project: z.int().optional(),
 	labels: z.array(
 		z.discriminatedUnion("create", [
 			// fetch label
@@ -115,18 +138,38 @@ export const MapFormat = z.object({
 		]),
 	),
 	// maps assignees
-	members: z.array(
-		z.object({
-			// The name of the member in Trello.
-			trello: z
-				.string()
-				.min(1)
-				.refine((arg) => arg.replace(/^@/, "")),
-			// The username of the member in GitHub.
-			github: z
-				.string()
-				.min(1)
-				.refine((arg) => arg.replace(/^@/, "")),
-		}),
-	),
+	users: z
+		.array(
+			z.object({
+				// The name of the user in Trello.
+				trello: z
+					.string()
+					.min(1)
+					.refine((arg) => arg.replace(/^@/, "")),
+				// The username of the user in GitHub.
+				github: z
+					.string()
+					.min(1)
+					.refine((arg) => arg.replace(/^@/, "")),
+			}),
+		)
+		.optional()
+		.default([]),
+	// maps the Trello List of each card to:
+	// 	 a) a GitHub Projects Status (`status =`)
+	// 	 b) a GitHub Label (`label =`)
+	// 	 c) a GitHub Milestone (`milestone =`)
+	lists: z
+		.array(
+			z.object({
+				list: z.string().min(1),
+				// `lists[].status` is only valid if `.project` is set
+				status: z.union([z.int(), z.string().min(1)]).optional(),
+				// the other two are applicable anywhere
+				label: z.union([z.int(), z.string().min(1)]).optional(),
+				milestone: z.union([z.int(), z.string().min(1)]).optional(),
+			}),
+		)
+		.optional()
+		.default([]),
 });

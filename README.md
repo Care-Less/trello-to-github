@@ -7,9 +7,10 @@ A command-line tool to transfer all cards from a Trello board into GitHub Issues
 - Exports Trello cards as GitHub issues in any repository
 - Preserves card titles, descriptions, and labels
 - Maps Trello lists to GitHub issue labels or milestones
-- Supports authentication for both Trello and GitHub
 - Interactive or fully automated modes
 - Dry-run mode for previewing the migration
+
+![A screenshot of the tool in use](./.github/assets/screenshot.png)
 
 ## Installation
 

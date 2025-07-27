@@ -1,3 +1,37 @@
+# [optional] the ID of the GitHub Project to add new issues to
+project = 5
+
+[repo]
+# The GitHub username of the repo owner
+owner = "piemot"
+# If the owner is an org, use:
+# owner = { type = "organization", login = "piemot" }
+
+# The name of the repository
+repo = "sample"
+
+[[users]]
+trello = "piemot"
+github = "piemot"
+
+
+[[lists]]
+# The name or ID of the Trello list
+list = "Bugs"
+# The name or ID of the equivalent GitHub label
+label = "bug"
+
+[[lists]]
+# The name or ID of the Trello list
+list = "Done"
+# The name or ID of the equivalent GitHub Project Status (requires `project` to be set above)
+status = "Done"
+
+[[lists]]
+list = "Suggestions"
+status = "In Progress"
+
+
 [[labels]]
 # The name of the Trello label
 trello = "High Priority"

@@ -94,6 +94,11 @@ const group = await p.group(
 
 			return p.password({
 				message: `Provide a ${chalk.underline.blue(terminalLink("Personal Access Token", "https://github.com/settings/tokens"))} with at least the \`${chalk.green("repo")}\` scope.`,
+				validate: (val) => {
+					if (!val) {
+						return "Please enter a token.";
+					}
+				},
 			});
 		},
 		mapFile: async () => {
@@ -466,6 +471,24 @@ for (const mapping of map.lists) {
 	}
 }
 
+const skippedLists: { id: string; name: string }[] = [];
+
+for (const listKey of map.skip.lists) {
+	const trelloList = trello.lists.find(
+		(list) => list.id === listKey || list.name === listKey,
+	);
+
+	if (trelloList) {
+		skippedLists.push(trelloList);
+	} else {
+		invalidLists.push(listKey);
+	}
+}
+
+trello.cards.filter(
+	(card) => !skippedLists.some((list) => list.id === card.idList),
+);
+
 const mappedLabels = labels.filter(
 	(l) =>
 		l.type === "toCreate" || l.type === "mapped" || l.type === "listMapped",
@@ -524,7 +547,7 @@ if (missingLabels.length > 0) {
 if (invalidLists.length > 0) {
 	const unknownLists = listConjunction.format(invalidLists);
 	p.log.error(
-		`These lists (see ${chalk.dim("map.lists[].list")}) do not exist in Trello: ${unknownLists}`,
+		`These lists (see ${chalk.dim("map.lists[].list")} or ${chalk.dim("map.skip.lists[]")}) do not exist in Trello: ${unknownLists}`,
 	);
 }
 
@@ -662,11 +685,9 @@ function getLabelsForCard(card: TrelloCard): string[] {
 			(label) =>
 				label.type !== "listMapped" && label.trello.name === trelloName,
 		);
-		invariant(
-			found,
-			"There should not exist a Trello label that is not in `mappedLabels`.",
-		);
-		res.push(found.github.name);
+		if (found) {
+			res.push(found.github.name);
+		}
 	}
 
 	const listLabel = mappedLabels.find(
@@ -726,7 +747,10 @@ function getCommentsForCard(card: TrelloCard): string[] {
 }
 
 async function addIssueToProject(issueNodeId: string) {
-	if (!projectInfo) return;
+	invariant(
+		projectInfo,
+		"projectInfo must be set to call `addIssueToProject()`.",
+	);
 	const res = await octokit.graphql(`
 	mutation {
 		addProjectV2ItemById(input: {projectId: "${projectInfo.projectId}" contentId: "${issueNodeId}"}) {
@@ -741,7 +765,7 @@ async function addIssueToProject(issueNodeId: string) {
 }
 
 async function setIssueStatus(itemId: string, statusId: string) {
-	if (!projectInfo) return;
+	invariant(projectInfo, "projectInfo must be set to call `setIssueStatus()`.");
 	await octokit.graphql(`
 		mutation {
 			updateProjectV2ItemFieldValue(
@@ -758,7 +782,10 @@ async function setIssueStatus(itemId: string, statusId: string) {
 		}`);
 }
 
-for (const card of trello.cards) {
+const spin = p.spinner({ indicator: "timer" });
+spin.start(`Creating ${chalk.blue(trello.cards.length)} issues`);
+
+for (const [i, card] of trello.cards.entries()) {
 	const issue = await octokit.request("POST /repos/{owner}/{repo}/issues", {
 		...baseRequest,
 		title: card.name,
@@ -787,6 +814,11 @@ for (const card of trello.cards) {
 			await setIssueStatus(itemId, status.id);
 		}
 	}
+
+	spin.message(
+		`Creating ${chalk.blue(trello.cards.length)} issues • issue ${chalk.blue(i + 1)}/${chalk.blue(trello.cards.length)}`,
+	);
 }
 
+spin.stop(`Created ${chalk.blue(trello.cards.length)} issues`);
 p.outro();

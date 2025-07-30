@@ -172,4 +172,11 @@ export const MapFormat = z.object({
 		)
 		.optional()
 		.default([]),
+	skip: z
+		.object({
+			// Do not migrate a card if it is in any of these lists
+			lists: z.array(z.string().min(1)).optional().default([]),
+		})
+		.optional()
+		.default({ lists: [] }),
 });

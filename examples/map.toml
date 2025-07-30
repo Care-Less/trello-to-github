@@ -10,6 +10,11 @@ owner = "piemot"
 # The name of the repository
 repo = "sample"
 
+
+[skip]
+lists = ["Key"]
+
+
 [[users]]
 trello = "piemot"
 github = "piemot"

@@ -830,7 +830,7 @@ for (const [i, card] of trello.cards.entries()) {
 
 	if (projectInfo) {
 		const itemId = await addIssueToProject(issue.data.node_id);
-		const status = validStatusFields.get(card.id);
+		const status = validStatusFields.get(card.idList);
 		if (status) {
 			await setIssueStatus(itemId, status.id);
 		}

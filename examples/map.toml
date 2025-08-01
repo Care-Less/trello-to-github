@@ -40,10 +40,6 @@ status = "Backlog"
 list = "Work in Progress"
 status = "In progress"
 
-[[lists]]
-list = "Bugs"
-label = "bug"
-
 
 [[labels]]
 # The name of the Trello label

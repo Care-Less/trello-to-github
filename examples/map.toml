@@ -19,9 +19,9 @@ lists = ["Key", "Done"]
 trello = "piemot"
 github = "piemot"
 
-[[users]]
-trello = "geheimerwolf"
-github = "GeheimerWolf"
+# [[users]]
+# trello = "geheimerwolf"
+# github = "GeheimerWolf"
 
 
 [[lists]]
@@ -34,6 +34,10 @@ label = "bug"
 # The name or ID of the Trello list
 list = "Backlog"
 # The name or ID of the equivalent GitHub Project Status (requires `project` to be set above)
+status = "Backlog"
+
+[[lists]]
+list = "Suggestions"
 status = "Backlog"
 
 [[lists]]

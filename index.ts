@@ -34,6 +34,10 @@ const program = new Command()
 		"--keep-closed",
 		"Also transfer cards that have been closed (archived)",
 	)
+	.option(
+		"--keep-closed-lists",
+		"Also transfer cards that are in a closed (archived) list",
+	)
 	.addOption(
 		new Option(
 			"--trello-export <file.json>",
@@ -93,7 +97,7 @@ const group = await p.group(
 			}
 
 			return p.password({
-				message: `Provide a ${chalk.underline.blue(terminalLink("Personal Access Token", "https://github.com/settings/tokens"))} with at least the \`${chalk.green("repo")}\` scope.`,
+				message: `Provide a ${chalk.underline.blue(terminalLink("Personal Access Token", "https://github.com/settings/tokens"))} with at least the \`${chalk.green("repo")}\` scope.\n${chalk.dim("Issues will be owned by the user this token belongs to.")}`,
 				validate: (val) => {
 					if (!val) {
 						return "Please enter a token.";
@@ -254,7 +258,17 @@ const trello = getTrello.result.data;
 const map = getMap.result.data;
 
 if (!opts.keepClosed) {
-	trello.cards.filter((card) => !card.closed);
+	trello.cards = trello.cards.filter((card) => !card.closed);
+}
+
+const closedLists = trello.lists
+	.filter((list) => list.closed)
+	.map((list) => list.id);
+
+if (!opts.keepClosedLists) {
+	trello.cards = trello.cards.filter(
+		(card) => !closedLists.includes(card.idList),
+	);
 }
 
 const octokit = new Octokit({ auth: group.ghToken });
@@ -485,7 +499,7 @@ for (const listKey of map.skip.lists) {
 	}
 }
 
-trello.cards.filter(
+trello.cards = trello.cards.filter(
 	(card) => !skippedLists.some((list) => list.id === card.idList),
 );
 
@@ -663,14 +677,21 @@ type TrelloCard = (typeof trello.cards)[number];
 function getDescriptionForCard(card: TrelloCard): string {
 	let body = "";
 	if (card.desc.length > 0) {
-		body += `${card.desc}\n\n---\n\n`;
+		body += card.desc;
 	}
 
 	const checklistStr = getChecklistContentForCard(card);
 	if (checklistStr) {
-		body += `\n${checklistStr}\n`;
+		if (card.desc.length > 0) {
+			body += "\n\n---\n\n";
+		}
+		body += checklistStr;
 	}
-	body += `\n---\n> Migrated from [Trello Card](${card.url})`;
+
+	if (card.desc.length > 0 || checklistStr) {
+		body += "\n\n---\n\n";
+	}
+	body += `> Migrated from [Trello Card](${card.url})\n`;
 	body += card.attachments
 		.map((attachment) => `- [${attachment.name}](${attachment.url})`)
 		.join("\n");

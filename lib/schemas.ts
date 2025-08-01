@@ -44,6 +44,7 @@ export const BoardExport = z.object({
 			id: z.string(),
 			name: z.string(),
 			url: z.string(),
+			// called "archived" in Trello's Web UI
 			closed: z.boolean(),
 			desc: z.string(),
 			// The IDs of the checklists it displays

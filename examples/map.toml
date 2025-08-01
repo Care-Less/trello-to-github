@@ -1,5 +1,5 @@
 # [optional] the ID of the GitHub Project to add new issues to
-project = 5
+project = 6
 
 [repo]
 # The GitHub username of the repo owner
@@ -8,16 +8,20 @@ owner = "piemot"
 # owner = { type = "organization", login = "piemot" }
 
 # The name of the repository
-repo = "sample"
+repo = "trello-migration-test"
 
 
 [skip]
-lists = ["Key"]
+lists = ["Key", "Done"]
 
 
 [[users]]
 trello = "piemot"
 github = "piemot"
+
+[[users]]
+trello = "geheimerwolf"
+github = "GeheimerWolf"
 
 
 [[lists]]
@@ -28,53 +32,53 @@ label = "bug"
 
 [[lists]]
 # The name or ID of the Trello list
-list = "Done"
+list = "Backlog"
 # The name or ID of the equivalent GitHub Project Status (requires `project` to be set above)
-status = "Done"
+status = "Backlog"
 
 [[lists]]
-list = "Suggestions"
-status = "In Progress"
+list = "Work in Progress"
+status = "In progress"
+
+[[lists]]
+list = "Bugs"
+label = "bug"
 
 
 [[labels]]
 # The name of the Trello label
 trello = "High Priority"
 # The name or ID of the equivalent GitHub label
-github = 9000084910
+github = "P0"
 
 [[labels]]
 trello = "Med. Priority"
-github = 9000085331
+github = "P1"
 
 [[labels]]
 trello = "Low Priority"
-github = 9000085739
+github = "P2"
 
 [[labels]]
 trello = "Enhancement"
-github = 8999843230
+github = "enhancement"
 
 [[labels]]
 trello = "New Feature"
-github = 8999843230
+github = "enhancement"
 
 [[labels]]
 trello = "Bug"
-github = 8999843222
+github = "bug"
 
 [[labels]]
 trello = "No Repro"
-github = 9000089270
+github = "invalid"
 
 [[labels]]
 trello = "Patreon Locked"
-github = 9000090739
+github = "Premium"
 
 [[labels]]
 trello = "RFC"
-github = 8999843233
-
-[[members]]
-trello = "piemot"
-github = "piemot"
+github = "question"

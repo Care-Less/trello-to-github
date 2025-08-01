@@ -1,76 +1,108 @@
-# Trello-to-GitHub CLI
+# Trello to GitHub Import Tool
 
-A command-line tool to transfer all cards from a Trello board into GitHub Issues!
+A CLI utility to import a Trello project into GitHub Issues and Projects.
 
 ## Features
 
-- Exports Trello cards as GitHub issues in any repository
-- Preserves card titles, descriptions, and labels
-- Maps Trello lists to GitHub issue labels or milestones
-- Interactive or fully automated modes
-- Dry-run mode for previewing the migration
+- **Imports Trello Boards**: Transfer cards, lists, and board structure from Trello to GitHub.
+- **User and Label Mapping**: Map Trello users and labels to GitHub equivalents via a TOML file.
+- **Flexible Trello Input**: Import directly from a Trello export JSON file or a live board URL.
+- **GitHub Auth**: Uses your GitHub personal access token for authentication.
 
 ![A screenshot of the tool in use](./.github/assets/screenshot.png)
 
 ## Installation
 
-Clone this repo and install dependencies:
-
 ```bash
-git clone https://github.com/piemot/trello-to-github.git
-cd trello-to-github
-bun install
+npm install -g @piemot/trello-to-github
+# or use via npx
+npx @piemot/trello-to-github ...
 ```
 
 ## Usage
 
-### Basic command
-
 ```bash
-trello-to-github \
-  --trello-key <TRELLO_API_KEY> \
-  --trello-token <TRELLO_API_TOKEN> \
-  --trello-board <TRELLO_BOARD_ID> \
-  --trello-export <TRELLO_EXPORT_FILE>
-  --github-token <GITHUB_TOKEN> \
-  --github-repo <OWNER/REPO>
+trello-to-github [options]
 ```
 
 ### Options
 
-| Option            | Description                                         | Required |
-| ----------------- | --------------------------------------------------- | -------- |
-| `--trello-key`    | Your Trello API key                                 | Yes      |
-| `--trello-token`  | Your Trello API token                               | Yes      |
-| `--trello-board`  | The Trello board ID to export                       | Yes      |
-| `--github-token`  | Your GitHub personal access token                   | Yes      |
-| `--github-repo`   | Target GitHub repo (format: owner/repo)             | Yes      |
-| `--label-mapping` | Optional path to JSON file for custom label mapping | No       |
-| `--dry-run`       | Preview what will be transferred (no changes made)  | No       |
-| `--interactive`   | Launch interactive prompt for options               | No       |
-| `--help`          | Show CLI help                                       | No       |
+- `--github-token <token>`  
+  Your GitHub Personal Access Token. **Required** for making changes on GitHub.
 
-### Example
+- `-m, --map <file.toml>`  
+  Path to a TOML file mapping Trello users and labels to GitHub.
+
+- `--dry-run`  
+  Preview the migration, showing what would be transferred without making changes.
+
+- `--keep-closed`  
+  Also transfer cards that have been closed (archived) on Trello.
+
+- `--trello-export <file.json>`  
+  Path to a Trello export JSON file.  
+  You can get this by downloading:  
+  `https://trello.com/b/<board-id>.json`
+
+- `--trello-url <url>`  
+  The URL to your Trello board.  
+  _Cannot be used together with `--trello-export`._
+
+- `-h, --help`  
+  Show help information.
+
+- `-V, --version`  
+  Show version information.
+
+## Example
 
 ```bash
 trello-to-github \
-  --trello-key 123abc \
-  --trello-token abc123tok \
-  --trello-board 1a2b3c4d \
-  --github-token ghp_abcdef123456 \
-  --github-repo piemot/awesome-project \
+  --github-token YOUR_TOKEN_HERE \
+  --trello-export board.json \
+  --map mapping.toml \
   --dry-run
 ```
 
+## Mapping File
+
+The mapping file is a TOML file that lets you specify how Trello users and labels map to GitHub users and labels.
+
+```toml
+project = 5
+
+[repo]
+# The GitHub username of the repo owner
+owner = "piemot"
+# If the owner is an org, use:
+# owner = { type = "organization", login = "piemot" }
+
+# The name of the repository
+repo = "sample"
+
+[[users]]
+trello = "piemot"
+github = "piemot"
+
+[[labels]]
+trello = "RFC"
+github = "Request For Comments"
+```
+
+## How to Get Your Trello Export
+
+1. Go to your Trello board.
+2. Visit: `https://trello.com/b/<board-id>.json`
+3. Save the file locally and use it with `--trello-export`.
+
 ## Notes
 
-- For Trello API credentials, see [Getting your Trello API key and token](https://trello.com/app-key).
-- For GitHub tokens, generate a [personal access token](https://github.com/settings/tokens) with `repo` scope.
-- Large boards may take several minutes to transfer.
+- You must have a [GitHub Personal Access Token](https://github.com/settings/tokens) with `repo` permissions.
+- Either `--trello-export` or `--trello-url` must be provided, but not both.
 
-## Contribution
+## Contributing
 
-PRs welcome! Please open issues for feature requests or bugs.
+PRs welcome! Please open issues for feature requests or bug reports.
 
 ## License
 
@@ -78,4 +110,4 @@ MIT
 
 ---
 
-_This tool is not affiliated with Trello or GitHub._
+_This project is not affiliated with Trello or GitHub._
